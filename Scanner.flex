@@ -49,6 +49,7 @@ espaco = {fimdeLinha} | [ \t\f]
 "if"      { return criaSimbolo(sym.KW_IF); }
 "else"    { return criaSimbolo(sym.KW_ELSE); }
 "while"   { return criaSimbolo(sym.KW_WHILE); }
+"return"  { return criaSimbolo(sym.KW_RETURN); }
 
 ">=" { return criaSimbolo(sym.MAIORIGUAL); }
 "<=" { return criaSimbolo(sym.MENORIGUAL); }
