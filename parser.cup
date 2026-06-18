@@ -9,12 +9,18 @@ parser code{:
         scanner.defineErro(linha, coluna, texto);
     }
 
+    /* Sobrescreve o metodo padrao para evitar NullPointerException
+       causado pela incompatibilidade entre CUP v0.10j e runtime-11b */
+    public void syntax_error(java_cup.runtime.Symbol cur_token) {
+        // suprime a mensagem padrao que causa travamento
+    }
+
 :}
 
 /* TERMINAIS */
 terminal PTVIRG, VIRG, PTO, MAIS, MENOS, DIV, MULT, MOD, IGUAL;
 terminal ABRE_PARENT, FECHA_PARENT, ABRE_CHAVE, FECHA_CHAVE, ABRE_COLCH, FECHA_COLCH;
-terminal KW_PROGRAM, KW_IF, KW_ELSE, KW_WHILE;
+terminal KW_PROGRAM, KW_IF, KW_ELSE, KW_WHILE, KW_RETURN;
 terminal MAIOR, MENOR, MAIORIGUAL, MENORIGUAL, IGUALIGUAL, DIF;
 terminal Double NUMBER;
 terminal String IDENT;
@@ -22,9 +28,9 @@ terminal String IDENT;
 /* NÃO TERMINAIS */
 non terminal expr_list, expr_ptv;
 non terminal Double expr, term, factor, designator;
-non terminal type, varDecl_op, varDecl, varDecl_aux;
+non terminal type, varDecl_op, varDecl, varDecl_aux, varDecl_prefix;
 non terminal statement, statement_aux, program;
-non terminal estruturaIf, estruturaElse, condicao, op_Relacional;
+non terminal estruturaIf, estruturaElse, condicao, op_Relacional, estruturaWhile, estruturaReturn;
 
 program ::= 
         KW_PROGRAM IDENT
@@ -44,22 +50,54 @@ statement ::=
       | designator IGUAL expr:e PTVIRG  
         {: System.out.println("Atribuicao reconhecida: " + e); :}
       | estruturaIf
+      | estruturaWhile
+      | estruturaReturn
       ;
 
 estruturaIf ::= 
         KW_IF ABRE_PARENT condicao FECHA_PARENT ABRE_CHAVE
-        statement_aux
+        expr_list
         FECHA_CHAVE estruturaElse
-        ;
+      | KW_IF expr:e op_Relacional expr ABRE_CHAVE
+        {: parser.defineErro(eleft, eright, "Condicional sem parenteses"); :}
+        expr_list
+        FECHA_CHAVE estruturaElse
+      | KW_IF ABRE_PARENT expr:e FECHA_PARENT ABRE_CHAVE
+        {: parser.defineErro(eleft, eright, "Condicao sem operador logico"); :}
+        expr_list
+        FECHA_CHAVE estruturaElse
+      ;
 
 estruturaElse ::= 
-        KW_ELSE ABRE_CHAVE statement_aux FECHA_CHAVE
+        KW_ELSE ABRE_CHAVE expr_list FECHA_CHAVE
       | /* vazio */
       ;
 
+estruturaWhile ::=
+        KW_WHILE ABRE_PARENT condicao FECHA_PARENT ABRE_CHAVE
+        expr_list
+        FECHA_CHAVE
+      | KW_WHILE condicao:c ABRE_CHAVE
+        {: parser.defineErro(cleft, cright, "While sem parenteses"); :}
+        expr_list
+        FECHA_CHAVE
+      ;
+
+estruturaReturn ::=
+        KW_RETURN expr:e PTVIRG
+        {: System.out.println("Retorno: " + e); :}
+      | KW_RETURN expr:e error
+        {: parser.defineErro(eleft, eright, "Falta ponto e virgula no return"); System.out.println("Retorno: " + e); :}
+      | KW_RETURN PTVIRG
+        {: System.out.println("Retorno vazio"); :}
+      | KW_RETURN error
+        {: parser.defineErro(0, 0, "Falta ponto e virgula no return"); System.out.println("Retorno vazio"); :}
+        ;
+
+
 condicao ::= 
         expr op_Relacional expr
-        ;
+      ;
 
 op_Relacional ::=
         MAIOR
@@ -80,12 +118,19 @@ varDecl_aux ::=
       | /* vazio */
       ;
 
-varDecl ::= 
+varDecl_prefix ::=
         type IDENT:id 
         {: System.out.print("Declaracao variavel:" + id); :} 
-        varDecl_op PTVIRG
-        {: System.out.println(""); :}
+        varDecl_op
         ;
+
+varDecl ::= 
+        varDecl_prefix PTVIRG
+        {: System.out.println(""); :}
+      | varDecl_prefix:p
+        {: parser.defineErro(pleft, pright, "Falta ponto e virgula na declaracao de variavel"); System.out.println(""); :}
+        ;
+
 
 varDecl_op ::= 
         varDecl_op VIRG IDENT:id
@@ -111,6 +156,8 @@ expr ::=
         {: RESULT = -t; :}                
       | term:t
         {: RESULT = t.doubleValue(); :}
+	  | expr:e {: parser.defineErro(eleft, eright, "Expressao sem operador");:}
+	  term:t {: RESULT =t.doubleValue(); :}
       ;
           
 term ::= 
