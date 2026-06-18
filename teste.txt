@@ -1,10 +1,19 @@
 program p
-	int a;
-	int[] vet;
-	float b, x;
+int a;
+float b
 {
-	vet[4] = 10 - 8;
-	1 + 2;
-	4 + a;
-	4 / 0;
+	if a > 2 {
+		1+1;
+	}
+	4 / 0; 
+	while a > 2 {
+		1+1;
+	}
+	if (a) {
+		1+1;
+	}
+	return a
+	return
 }
+
+
